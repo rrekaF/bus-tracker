@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Add Map</title>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=default"></script>
+
+    <link rel="stylesheet" type="text/css" href="style.css" />
+    <!-- <script type="module" src="script.js"></script> -->
+</head>
+
+<body>
+    <h3>My Google Maps Demo</h3>
+    <!--The div element for the map -->
+    <div id="map"></div>
+
+    <!-- prettier-ignore -->
+    <script>(g => { var h, a, k, p = "The Google Maps JavaScript API", c = "google", l = "importLibrary", q = "__ib__", m = document, b = window; b = b[c] || (b[c] = {}); var d = b.maps || (b.maps = {}), r = new Set, e = new URLSearchParams, u = () => h || (h = new Promise(async (f, n) => { await (a = m.createElement("script")); e.set("libraries", [...r] + ""); for (k in g) e.set(k.replace(/[A-Z]/g, t => "_" + t[0].toLowerCase()), g[k]); e.set("callback", c + ".maps." + q); a.src = `https://maps.${c}apis.com/maps/api/js?` + e; d[q] = f; a.onerror = () => h = n(Error(p + " could not load.")); a.nonce = m.querySelector("script[nonce]")?.nonce || ""; m.head.append(a) })); d[l] ? console.warn(p + " only loads once. Ignoring:", g) : d[l] = (f, ...n) => r.add(f) && u().then(() => d[l](f, ...n)) })
+            ({ key: "API_KEY", v: "weekly" });</script>
+    <script src="https://unpkg.com/axios@1.6.7/dist/axios.min.js"></script>
+    <script>
+        // Initialize and add the map
+        let map;
+
+        function getData(route) {
+            let myBuses = [];
+            let data = [];
+            axios.get("https://ckan2.multimediagdansk.pl/gpsPositions?v=2").then(function (response) {
+                for (const key in response['data']['vehicles']) {
+                    let item = response['data']['vehicles'][key];
+                    if (item['routeShortName'] == route) {
+                        myBuses.push(item);
+                    }
+                }
+            }).catch(function (error) {
+                console.log("Error: " + error);
+            }).finally(function () {
+                // console.log(myBuses);
+                for (bus in myBuses) {
+                    console.log(bus)
+                    data.push({
+                        position: {
+                            lat: myBuses[bus]['lat'],
+                            lng: myBuses[bus]['lon']
+                        },
+                        tripId: myBuses[bus]['tripId'],
+                        angle: myBuses[bus]['direction'],
+                        headsign: myBuses[bus]['headsign']
+                    });
+                }
+                console.log(data)
+                initMap(data);
+            })
+
+        }
+
+        async function initMap(data) {
+            // Request needed libraries.
+            const { Map } = await google.maps.importLibrary("maps");
+            const { AdvancedMarkerElement } = await google.maps.importLibrary("marker");
+
+            let mapCenter = { lat: 0, lng: 0 };
+            for (bus in data) {
+                mapCenter['lat'] += data[bus]['position']['lat'];
+                mapCenter['lng'] += data[bus]['position']['lng'];
+            }
+            mapCenter['lat'] /= data.length;
+            mapCenter['lng'] /= data.length;
+
+            map = new Map(document.getElementById("map"), {
+                zoom: 14,
+                center: mapCenter,
+                mapId: "demo",
+            });
+
+            let markers = [];
+            let arrows = [];
+            const lineSymbol = {
+                path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+            };
+
+            for (bus in data) {
+                markers.push(new AdvancedMarkerElement({
+                    map: map,
+                    position: data[bus]['position'],
+                    title: data[bus]['headsign']
+                }))
+
+                let destLat, destLng;
+                destLat = 0.00002 * data[bus]['position']['lat'] * Math.cos(data[bus]['angle'] * (Math.PI/180));
+                destLng = 0.0002 * data[bus]['position']['lng'] * Math.sin(data[bus]['angle'] * (Math.PI/180));
+                destLat += data[bus]['position']['lat'];
+                destLng += data[bus]['position']['lng'];
+
+                arrows.push(new google.maps.Polyline({
+                    path: [
+                        data[bus]['position'],
+                        { lat: destLat, lng: destLng},
+                    ],
+                    icons: [
+                        {
+                            icon: lineSymbol,
+                            offset: "100%",
+                        },
+                    ],
+                    map: map,
+                }))
+            }
+
+
+
+        }
+
+        getData('174');
+    </script>
+</body>
+
+</html>
