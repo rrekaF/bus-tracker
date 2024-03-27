@@ -9,7 +9,6 @@
            console.log(chosenRoute);
            getData(chosenRoute);
            event.preventDefault();
-
         }
 
         function getData(route) {
@@ -25,7 +24,6 @@
             }).catch(function (error) {
                 console.log("Error: " + error);
             }).finally(function () {
-                // console.log(myBuses);
                 for (bus in myBuses) {
                     console.log(bus)
                     data.push({
